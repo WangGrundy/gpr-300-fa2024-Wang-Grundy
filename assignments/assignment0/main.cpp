@@ -12,7 +12,9 @@
 #include <ew/model.h>
 #include <ew/camera.h>
 #include <ew/transform.h>
+#include <ew/cameraController.h>
 
+ew::CameraController cameraController;
 ew::Transform monkeyTransform;
 ew::Camera camera;
 
@@ -53,6 +55,7 @@ int main() {
 		prevFrameTime = time;
 
 		//RENDER
+		cameraController.move(window, &camera, deltaTime);
 
 		//Clears backbuffer color & depth values
 		glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
@@ -78,6 +81,12 @@ int main() {
 	printf("Shutting down...");
 }
 
+void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
+	camera->position = glm::vec3(0, 0, 5.0f);
+	camera->target = glm::vec3(0);
+	controller->yaw = controller->pitch = 0;
+}
+
 void drawUI() {
 	ImGui_ImplGlfw_NewFrame();
 	ImGui_ImplOpenGL3_NewFrame();
@@ -85,6 +94,10 @@ void drawUI() {
 
 	ImGui::Begin("Settings");
 	ImGui::Text("Add Controls Here!");
+
+	if (ImGui::Button("Reset Camera")) {
+		resetCamera(&camera, &cameraController);
+	}
 	ImGui::End();
 
 	ImGui::Render();
@@ -132,4 +145,3 @@ GLFWwindow* initWindow(const char* title, int width, int height) {
 
 	return window;
 }
-
