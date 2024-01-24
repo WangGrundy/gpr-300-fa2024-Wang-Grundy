@@ -13,6 +13,8 @@
 #include <ew/camera.h>
 #include <ew/transform.h>
 #include <ew/cameraController.h>
+#include <ew/texture.h>
+
 
 ew::CameraController cameraController;
 ew::Transform monkeyTransform;
@@ -36,11 +38,20 @@ int main() {
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
+	//Handles to OpenGL object are unsigned integers
+	GLuint brickTexture = ew::loadTexture("assets/materials/ground.png");
+
 	//load shader
 	ew::Shader shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
 
 	//load model
 	ew::Model monkeyModel = ew::Model("assets/suzanne.obj");
+
+	//Bind brick texture to texture unit 0 
+	glBindTextureUnit(0, brickTexture);
+	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
+	shader.use();
+	shader.setInt("_MainTex", 0);
 
 	camera.position = glm::vec3(0.0f, 0.0f, 5.0f);
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
