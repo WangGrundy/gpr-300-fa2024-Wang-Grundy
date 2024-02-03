@@ -11,6 +11,7 @@ namespace ew {
 	unsigned int createShaderProgram(const char* vertexShaderSource, const char* fragmentShaderSource);
 	class Shader {
 	public:
+		Shader() {};
 		Shader(const std::string& vertexShader, const std::string& fragmentShader);
 		void use()const;
 		void setInt(const std::string& name, int v) const;
