@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <math.h>
+#include <iostream>
 
 #include <ew/external/glad.h>
 
@@ -14,6 +15,7 @@
 #include <ew/transform.h>
 #include <ew/cameraController.h>
 #include <ew/texture.h>
+#include <Wang/framebuffer.h>
 
 struct Material{
 	float Ka = 1.0;
@@ -42,7 +44,17 @@ float prevFrameTime;
 float deltaTime;
 
 ew::Shader shader;
+ew::Shader simpleShader;
 ew::Model monkeyModel;
+
+//creating new frame buffer
+//wang::Framebuffer myFrameBuffer;
+
+unsigned int framebuffer;
+unsigned int textureColorbuffer;
+
+unsigned int quadVAO, quadVBO;
+GLuint tileTexture;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
@@ -53,8 +65,69 @@ int main() {
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
 	LoadModelsAndTextures();
-
 	CameraSetUp();
+
+	float quadVertices[] = { // vertex attributes for a quad that fills the entire screen in Normalized Device Coordinates.
+		// positions   // texCoords
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		-1.0f, -1.0f,  0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+
+		-1.0f,  1.0f,  0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f
+	};
+	// screen quad VAO
+	glGenVertexArrays(1, &quadVAO);
+	glGenBuffers(1, &quadVBO);
+	glBindVertexArray(quadVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+	//--------------------------------------------------------------
+
+	//create an actual framebuffer object and bind it
+	glGenFramebuffers(1, &framebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+
+	//create a texture image that we attach as a color attachment to the framebuffer
+	//set the texture's dimensions equal to the width and height of the window 
+	// generate texture
+	glGenTextures(1, &textureColorbuffer);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 800, 600, 0, GL_RGB, GL_UNSIGNED_INT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glBindTexture(GL_TEXTURE_2D, 0);
+
+	// attach it to currently bound framebuffer object
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+
+	//creating a renderBuffer object 
+	unsigned int rbo;
+	glGenRenderbuffers(1, &rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, screenWidth, screenHeight);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	//attach the renderbuffer object to the depth and stencil attachment of the framebuffer
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+	//frame buffer checker
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	/*So, to draw the scene to a single texture we'll have to take the following steps:
+
+		Render the scene as usual with the new framebuffer bound as the active framebuffer.
+		Bind to the default framebuffer.
+		Draw a quad that spans the entire screen with the new framebuffer's color buffer as its texture.*/
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -73,19 +146,30 @@ int main() {
 }
 
 void RenderInMain() {
-	//Clears backbuffer color & depth values
-	glClearColor(0.6f, 0.8f, 0.92f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	//configure VAO screen quad:
+	// first pass
+	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	glClearColor(0.6f, 0.8f, 0.9f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // we're not using the stencil buffer now
+	glEnable(GL_DEPTH_TEST);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, tileTexture);
+	
+	//Bind brick texture to texture unit 0 
+	glBindTextureUnit(0, tileTexture);
+	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	shader.use();
-	shader.setMat4("_Model", glm::mat4(1.0f));
-	shader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
-	shader.setVec3("_EyePos", camera.position);
+	shader.setInt("_MainTex", 0);
+	shader.setInt("_MainText_Normal", 1);
 
-	shader.setFloat("_Material.Ka", material.Ka);
-	shader.setFloat("_Material.Kd", material.Kd);
-	shader.setFloat("_Material.Ks", material.Ks);
-	shader.setFloat("_Material.Shininess", material.Shininess);
+	glBindVertexArray(quadVAO);
+	glDisable(GL_DEPTH_TEST);
+	glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 
 	//Rotate model around Y axis
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
@@ -93,28 +177,31 @@ void RenderInMain() {
 	//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
 	shader.setMat4("_Model", monkeyTransform.modelMatrix());
 
+	simpleShader.use();
+
+	//// second pass
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0); // back to default
+	//glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+	//glClear(GL_COLOR_BUFFER_BIT);
+
 	monkeyModel.draw(); //Draws monkey model using current shader
+
+	//glDisable(GL_DEPTH_TEST);
+	//glBindVertexArray(quadVAO);
+	//glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+
+	//glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void LoadModelsAndTextures() {
 
 	//Handles to OpenGL object are unsigned integers
-	//GLuint brickTexture = ew::loadTexture("assets/materials/ground.png");
-
-	GLuint tileTexture = ew::loadTexture("assets/materials/Tile/Tiles130.jpg");
-	GLuint tileNormalTexture = ew::loadTexture("assets/materials/Tile/Tiles130_Normal.png");
+	tileTexture = ew::loadTexture("assets/materials/Tile/Tiles130.jpg");
 
 	//load shader //load model
 	shader = ew::Shader("assets/lit.vert", "assets/lit.frag");
+	simpleShader = ew::Shader("assets/simple.vert", "assets/simple.frag");
 	monkeyModel = ew::Model("assets/suzanne.obj");
-
-	//Bind brick texture to texture unit 0 
-	glBindTextureUnit(0, tileTexture);
-	glBindTextureUnit(1, tileNormalTexture);
-	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
-	shader.use();
-	shader.setInt("_MainTex", 0);
-	shader.setInt("_MainText_Normal", 1);
 }
 
 void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
