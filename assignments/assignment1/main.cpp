@@ -45,7 +45,7 @@ float deltaTime;
 
 int HDR = 0;
 
-ew::Shader currentPostProcessingShader, litShader, invertShader, blurShader, noShader, gammaShader, srgbShader;
+ew::Shader currentPostProcessingShader, litShader, invertShader, blurShader, noShader, gammaShader, grayscaleShader;
 bool shaderChanged = false;
 ew::Model monkeyModel;
 
@@ -56,7 +56,7 @@ GLuint tileTexture;
 
 float gammaVal = 0;
 
-bool isSrgbShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
+bool isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
 
 int main() {
@@ -122,6 +122,7 @@ void RenderInMain() {
 
     // Use the current post-processing shader
 	UpdateCurrentPostProcessingShader();
+	
 
     // Bind the color buffer texture
     glBindTextureUnit(0, newFrameBuffer.colorBuffer);
@@ -141,7 +142,7 @@ void LoadModelsAndTextures() {
 	blurShader = ew::Shader("assets/quad.vert", "assets/blur.frag");
 	noShader = ew::Shader("assets/quad.vert", "assets/none.frag");
 	gammaShader = ew::Shader("assets/quad.vert", "assets/gamma.frag");
-	srgbShader = ew::Shader("assets/quad.vert", "assets/srgb.frag");
+	grayscaleShader = ew::Shader("assets/quad.vert", "assets/grayscale.frag");
 
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
@@ -172,8 +173,12 @@ void UpdateCurrentPostProcessingShader() {
 	if (isGammaShaderEnabled) {
 		gammaShader.use();
 	}
-	if (isSrgbShaderEnabled) {
-		srgbShader.use();
+	if (isGrayscaleShaderEnabled) {
+		//glEnable(GL_FRAMEBUFFER_SRGB);
+		grayscaleShader.use();
+	}
+	else {
+		glDisable(GL_FRAMEBUFFER_SRGB);
 	}
 
 	if (!postProcessShaderChanged) {
@@ -219,7 +224,7 @@ void drawUI() {
 			gammaShader.setFloat("gammaValue", gammaVal);
 
 		}
-		ImGui::Checkbox("srgb", &isSrgbShaderEnabled);
+		ImGui::Checkbox("grayscale", &isGrayscaleShaderEnabled);
 
 		postProcessShaderChanged = true;
 	}
