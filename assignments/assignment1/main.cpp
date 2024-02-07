@@ -45,7 +45,7 @@ float deltaTime;
 
 int HDR = 0;
 
-ew::Shader currentPostProcessingShader, litShader, invertShader, blurShader, noShader, gammaShader, grayscaleShader;
+ew::Shader litShader, invertShader, blurShader, noShader, gammaShader, grayscaleShader, coldShader;
 bool shaderChanged = false;
 ew::Model monkeyModel;
 
@@ -56,7 +56,7 @@ GLuint tileTexture;
 
 float gammaVal = 0;
 
-bool isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
+bool isColdShaderEnabled = false, isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
 
 int main() {
@@ -143,6 +143,7 @@ void LoadModelsAndTextures() {
 	noShader = ew::Shader("assets/quad.vert", "assets/none.frag");
 	gammaShader = ew::Shader("assets/quad.vert", "assets/gamma.frag");
 	grayscaleShader = ew::Shader("assets/quad.vert", "assets/grayscale.frag");
+	coldShader = ew::Shader("assets/quad.vert", "assets/cold.frag");
 
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
@@ -153,9 +154,6 @@ void LoadModelsAndTextures() {
 	litShader.use();
 	litShader.setInt("_MainTex", 0);
 	litShader.setInt("_MainText_Normal", 1);
-
-	//set initial shader
-	currentPostProcessingShader = noShader;
 }
 
 void UpdateCurrentPostProcessingShader() {
@@ -179,6 +177,9 @@ void UpdateCurrentPostProcessingShader() {
 	}
 	else {
 		glDisable(GL_FRAMEBUFFER_SRGB);
+	}
+	if (isColdShaderEnabled) {
+		coldShader.use();
 	}
 
 	if (!postProcessShaderChanged) {
@@ -225,6 +226,7 @@ void drawUI() {
 
 		}
 		ImGui::Checkbox("grayscale", &isGrayscaleShaderEnabled);
+		ImGui::Checkbox("coldness", &isColdShaderEnabled);
 
 		postProcessShaderChanged = true;
 	}
