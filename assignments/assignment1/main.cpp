@@ -17,8 +17,6 @@
 #include <ew/texture.h>
 #include <Wang/framebuffer.h>
 
-#include <Wang/framebuffer.h>
-
 struct Material {
 	float Ka = 1.0;
 	float Kd = 0.5;
@@ -94,11 +92,11 @@ void RenderInMain() {
 	glViewport(0, 0, newFrameBuffer.width, newFrameBuffer.height);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	//update litShader when adjusting controls
 	litShader.use();
 	litShader.setMat4("_Model", glm::mat4(1.0f));
 	litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 	litShader.setVec3("_EyePos", camera.position);
-
 	litShader.setFloat("_Material.Ka", material.Ka);
 	litShader.setFloat("_Material.Kd", material.Kd);
 	litShader.setFloat("_Material.Ks", material.Ks);
@@ -112,18 +110,24 @@ void RenderInMain() {
 
 	monkeyModel.draw(); //Draws monkey model using current shader
 
-	//Draw to default framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	currentPostProcessingShader.use();
-	glBindTextureUnit(0, newFrameBuffer.colorBuffer);
-	glBindVertexArray(dummyVAO);
-	glDrawArrays(GL_TRIANGLES, 0, 6); //6 for quad, 3 for triangle
+	 // Draw to the default framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    // Use the current post-processing shader
+    currentPostProcessingShader.use();
+
+    // Bind the color buffer texture
+    glBindTextureUnit(0, newFrameBuffer.colorBuffer);
+
+    // Draw the quad
+    glBindVertexArray(dummyVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6); // 6 for quad, 3 for triangle
 }
 
 void LoadModelsAndTextures() {
 	//Handles to OpenGL object are unsigned integers
-	GLuint tileTexture = ew::loadTexture("assets/materials/Tile/Tiles130.jpg");
+	tileTexture = ew::loadTexture("assets/materials/Tile/Tiles130.jpg");
 
 	//load shader
 	litShader = ew::Shader("assets/lit.vert", "assets/lit.frag");
@@ -134,7 +138,7 @@ void LoadModelsAndTextures() {
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
 
-	//Bind brick texture to texture unit 0 
+	//Bind texture to default in shader 0
 	glBindTextureUnit(0, tileTexture);
 	//Make "_MainTex" sampler2D sample from the 2D texture bound to unit 0
 	litShader.use();
