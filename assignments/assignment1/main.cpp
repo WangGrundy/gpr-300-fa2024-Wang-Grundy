@@ -43,7 +43,10 @@ int screenHeight = 720;
 float prevFrameTime;
 float deltaTime;
 
-ew::Shader currentPostProcessingShader, litShader, invertShader, blurShader, noShader;
+int HDR = 0;
+
+ew::Shader currentPostProcessingShader, litShader, invertShader, blurShader, noShader, gammaShader, srgbShader;
+bool shaderChanged = false;
 ew::Model monkeyModel;
 
 unsigned int dummyVAO;
@@ -51,7 +54,9 @@ unsigned int dummyVAO;
 wang::Framebuffer newFrameBuffer;
 GLuint tileTexture;
 
-bool noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false;
+float gammaVal = 0;
+
+bool isSrgbShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
 
 int main() {
@@ -65,7 +70,7 @@ int main() {
 	LoadModelsAndTextures();
 	CameraSetUp();
 
-	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, 1);
+	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 	glCreateVertexArrays(1, &dummyVAO);
 
 	while (!glfwWindowShouldClose(window)) {
@@ -76,7 +81,6 @@ int main() {
 		prevFrameTime = time;
 
 		CameraUpdate(window);
-		UpdateCurrentPostProcessingShader();
 		RenderInMain();
 		drawUI();
 
@@ -117,7 +121,7 @@ void RenderInMain() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Use the current post-processing shader
-    currentPostProcessingShader.use();
+	UpdateCurrentPostProcessingShader();
 
     // Bind the color buffer texture
     glBindTextureUnit(0, newFrameBuffer.colorBuffer);
@@ -133,9 +137,11 @@ void LoadModelsAndTextures() {
 
 	//load shader
 	litShader = ew::Shader("assets/lit.vert", "assets/lit.frag");
-	invertShader = ew::Shader("assets/invert.vert", "assets/invert.frag");
-	blurShader = ew::Shader("assets/blur.vert", "assets/blur.frag");
-	noShader = ew::Shader("assets/none.vert", "assets/none.frag");
+	invertShader = ew::Shader("assets/quad.vert", "assets/invert.frag");
+	blurShader = ew::Shader("assets/quad.vert", "assets/blur.frag");
+	noShader = ew::Shader("assets/quad.vert", "assets/none.frag");
+	gammaShader = ew::Shader("assets/quad.vert", "assets/gamma.frag");
+	srgbShader = ew::Shader("assets/quad.vert", "assets/srgb.frag");
 
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
@@ -153,24 +159,28 @@ void LoadModelsAndTextures() {
 
 void UpdateCurrentPostProcessingShader() {
 
-	if (!postProcessShaderChanged) {
-		return;
-	}
-	postProcessShaderChanged = false;
+	noShader.use();
 
-	if (noPostProcessShader) {
-		currentPostProcessingShader = noShader;
+	postProcessShaderChanged = true;
+
+	if (isInvertShaderEnabled) {
+		invertShader.use();
 	}
-	else if (isInvertShaderEnabled) {
-		currentPostProcessingShader = invertShader;
+	if (isBlurShaderEnabled) {
+		blurShader.use();
 	}
-	else if (isBlurShaderEnabled) {
-		currentPostProcessingShader = blurShader;
+	if (isGammaShaderEnabled) {
+		gammaShader.use();
 	}
-	else {
-		//default
-		currentPostProcessingShader = noShader;
+	if (isSrgbShaderEnabled) {
+		srgbShader.use();
 	}
+
+	if (!postProcessShaderChanged) {
+		noShader.use();
+	}
+
+	postProcessShaderChanged = false;
 }
 
 void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
@@ -184,6 +194,7 @@ void drawUI() {
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui::NewFrame();
 
+	ImGui::SetNextWindowSize(ImVec2(300, 500));
 	ImGui::Begin("Settings");
 	ImGui::Text("Add Controls Here!");
 
@@ -202,6 +213,13 @@ void drawUI() {
 		ImGui::Checkbox("none", &noPostProcessShader);
 		ImGui::Checkbox("Invert", &isInvertShaderEnabled);
 		ImGui::Checkbox("Blur", &isBlurShaderEnabled);
+		ImGui::Checkbox("Gamma", &isGammaShaderEnabled);
+		ImGui::SameLine();
+		if (ImGui::DragFloat("Gamma value", &gammaVal, 0.05, 0, 10)) {
+			gammaShader.setFloat("gammaValue", gammaVal);
+
+		}
+		ImGui::Checkbox("srgb", &isSrgbShaderEnabled);
 
 		postProcessShaderChanged = true;
 	}
