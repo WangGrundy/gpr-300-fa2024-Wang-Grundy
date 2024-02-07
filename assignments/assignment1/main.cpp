@@ -92,6 +92,8 @@ void RenderInMain() {
 	glViewport(0, 0, newFrameBuffer.width, newFrameBuffer.height);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glBindTextureUnit(0, tileTexture);
+
 	//update litShader when adjusting controls
 	litShader.use();
 	litShader.setMat4("_Model", glm::mat4(1.0f));
