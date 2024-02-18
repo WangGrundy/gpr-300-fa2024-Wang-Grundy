@@ -16,6 +16,7 @@
 #include <ew/cameraController.h>
 #include <ew/texture.h>
 #include <Wang/framebuffer.h>
+#include <ew/procGen.h>
 
 struct Material {
 	float Ka = 1.0;
@@ -26,7 +27,6 @@ struct Material {
 
 ew::CameraController cameraController;
 ew::Transform monkeyTransform;
-ew::Camera camera;
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
@@ -45,7 +45,7 @@ float deltaTime;
 
 int HDR = 0;
 
-ew::Shader litShader, invertShader, blurShader, noShader, gammaShader, grayscaleShader, coldShader;
+ew::Shader depthonlyShader, litShader, invertShader, blurShader, noShader, gammaShader, grayscaleShader, coldShader;
 bool shaderChanged = false;
 ew::Model monkeyModel;
 
@@ -59,19 +59,54 @@ float gammaVal = 0;
 bool isColdShaderEnabled = false, isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
 
+wang::Framebuffer shadowMapFrameBuffer;
+ew::Camera camera;
+ew::Camera camera2;
+glm::vec3 lightDirection(0,0,0);
+
+ew::Camera* currentCamera;
+
+bool isCamera2 = false;
+ew::Mesh planeMesh;
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
+	ew::Camera* currentCamera = &camera;
+	planeMesh = ew::Mesh(ew::createPlane(10, 10, 10));
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
 	glEnable(GL_DEPTH_TEST); //Depth testing
 
 	LoadModelsAndTextures();
-	CameraSetUp();
+	CameraSetUp();	
 
 	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
-	glCreateVertexArrays(1, &dummyVAO);
+
+	shadowMapFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
+
+	//create a shadow map
+	glCreateFramebuffers(1, &shadowMapFrameBuffer.fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFrameBuffer.fbo);
+	//not drawing colors.
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	glGenTextures(1, &shadowMapFrameBuffer.depthBuffer);
+	glBindTexture(GL_TEXTURE_2D, shadowMapFrameBuffer.depthBuffer);
+	//16 bit depth values, 2k resolution 
+	glTexStorage2D(GL_TEXTURE_2D, 1, GL_DEPTH_COMPONENT16, 2048, 2048);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//Pixels outside of frustum should have max distance (white)
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	float borderColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowMapFrameBuffer.depthBuffer, 0);
+	
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -91,6 +126,19 @@ int main() {
 
 void RenderInMain() {
 	
+	//shadow stuff
+	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFrameBuffer.fbo);
+	glViewport(0, 0, 2048, 2048);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	//set all unifroms for depthonlyShader
+	depthonlyShader.use();
+	depthonlyShader.setVec3("_LightDirection", lightDirection);
+	depthonlyShader.setMat4("_ViewProjection", camera2.projectionMatrix() * camera2.viewMatrix());
+	depthonlyShader.setVec3("vPos", camera2.position);
+
+	monkeyModel.draw();
+	
 	//Draw to off-screen framebuffer instead of screen
 	glBindFramebuffer(GL_FRAMEBUFFER, newFrameBuffer.fbo);
 	glViewport(0, 0, newFrameBuffer.width, newFrameBuffer.height);
@@ -108,6 +156,8 @@ void RenderInMain() {
 	litShader.setFloat("_Material.Ks", material.Ks);
 	litShader.setFloat("_Material.Shininess", material.Shininess);
 
+	planeMesh.draw();
+
 	//Rotate model around Y axis
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
@@ -122,7 +172,6 @@ void RenderInMain() {
 
     // Use the current post-processing shader
 	UpdateCurrentPostProcessingShader();
-	
 
     // Bind the color buffer texture
     glBindTextureUnit(0, newFrameBuffer.colorBuffer);
@@ -130,6 +179,7 @@ void RenderInMain() {
     // Draw the quad
     glBindVertexArray(dummyVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6); // 6 for quad, 3 for triangle
+	
 }
 
 void LoadModelsAndTextures() {
@@ -144,6 +194,7 @@ void LoadModelsAndTextures() {
 	gammaShader = ew::Shader("assets/quad.vert", "assets/gamma.frag");
 	grayscaleShader = ew::Shader("assets/quad.vert", "assets/grayscale.frag");
 	coldShader = ew::Shader("assets/quad.vert", "assets/cold.frag");
+	depthonlyShader = ew::Shader("assets/depthonly.vert", "assets/depthonly.frag");
 
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
@@ -190,6 +241,7 @@ void UpdateCurrentPostProcessingShader() {
 }
 
 void resetCamera(ew::Camera* camera, ew::CameraController* controller) {
+
 	camera->position = glm::vec3(0, 0, 5.0f);
 	camera->target = glm::vec3(0);
 	controller->yaw = controller->pitch = 0;
@@ -205,7 +257,7 @@ void drawUI() {
 	ImGui::Text("Add Controls Here!");
 
 	if (ImGui::Button("Reset Camera")) {
-		resetCamera(&camera, &cameraController);
+		resetCamera(currentCamera, &cameraController);
 	}
 
 	if (ImGui::CollapsingHeader("Material")) {
@@ -230,6 +282,29 @@ void drawUI() {
 
 		postProcessShaderChanged = true;
 	}
+
+	if (ImGui::CollapsingHeader("Active Camera")) {
+		//ImGui::Checkbox("Camera 2", &isCamera2);
+
+		if (ImGui::DragFloat3("Direction: ", &lightDirection.x, 0.05, -1, 1)) {
+			lightDirection = glm::normalize(lightDirection);
+			litShader.setVec3("_LightDirection", lightDirection);
+		}
+	}
+
+
+	ImGui::End();
+
+	ImGui::SetNextWindowSize(ImVec2(300, 300));
+	ImGui::Begin("Shadow Map");
+	//Using a Child allow to fill all the space of the window.
+	ImGui::BeginChild("Shadow Map");
+	//Stretch image to be window size
+	ImVec2 windowSize = ImGui::GetWindowSize();
+	//Invert 0-1 V to flip vertically for ImGui display
+	//shadowMap is the texture2D handle
+	ImGui::Image((ImTextureID)shadowMapFrameBuffer.depthBuffer, windowSize, ImVec2(0, 1), ImVec2(1, 0));
+	ImGui::EndChild();
 	ImGui::End();
 
 	ImGui::Render();
@@ -241,10 +316,26 @@ void CameraSetUp() {
 	camera.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
 	camera.aspectRatio = (float)screenWidth / screenHeight;
 	camera.fov = 60.0f; //Vertical field of view, in degrees
+
+	camera2.position = glm::vec3(2.0f, 2.0f, 2.0f);
+	camera2.target = glm::vec3(0.0f, 0.0f, 0.0f); //Look at the center of the scene
+	camera2.aspectRatio = (float)screenWidth / screenHeight;
+	camera2.fov = 60.0f; //Vertical field of view, in degrees
+	camera2.orthographic = true;
+	camera2.orthoHeight = 5;
+	camera2.aspectRatio = 1;
 }
 
 void CameraUpdate(GLFWwindow* window) {
-	cameraController.move(window, &camera, deltaTime);
+	if (isCamera2) {
+		currentCamera = &camera2;
+	}
+	else {
+		currentCamera = &camera;
+		//currentCamera = &camera2;
+	}
+
+	cameraController.move(window, currentCamera, deltaTime);
 }
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height)
