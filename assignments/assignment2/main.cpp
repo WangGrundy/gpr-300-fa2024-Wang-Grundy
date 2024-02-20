@@ -1,4 +1,3 @@
-#include "Scene.h"
 #include "UIClass.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);

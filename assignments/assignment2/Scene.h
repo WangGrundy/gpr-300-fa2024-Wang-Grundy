@@ -1,3 +1,8 @@
+#ifndef SCENE_H
+#define SCENE_H
+
+#pragma once
+
 #include <stdio.h>
 #include <math.h>
 #include <iostream>
@@ -25,6 +30,7 @@ struct Material {
 } material;
 
 namespace wang {
+
 	class Scene {
 	public:
 		Scene() {
@@ -90,3 +96,4 @@ namespace wang {
 		float deltaTime;
 	};
 }
+#endif // UICLASS_H
