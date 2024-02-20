@@ -22,14 +22,14 @@
 #include <Wang/framebuffer.h>
 #include <ew/procGen.h>
 
-struct Material {
-	float Ka = 1.0;
-	float Kd = 0.5;
-	float Ks = 0.5;
-	float Shininess = 128;
-} material;
-
 namespace wang {
+
+	struct Material {
+		float Ka = 1.0;
+		float Kd = 0.5;
+		float Ks = 0.5;
+		float Shininess = 128;
+	} material;
 
 	class Scene {
 	public:
