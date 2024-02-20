@@ -14,10 +14,10 @@ void UIClass::RenderUI() {
 	}
 
 	if (ImGui::CollapsingHeader("Material")) {
-		ImGui::SliderFloat("AmbientK", &wang::material.Ka, 0.0f, 1.0f);
-		ImGui::SliderFloat("DiffuseK", &wang::material.Kd, 0.0f, 1.0f);
-		ImGui::SliderFloat("SpecularK", &wang::material.Ks, 0.0f, 1.0f);
-		ImGui::SliderFloat("Shininess", &wang::material.Shininess, 2.0f, 1024.0f);
+		ImGui::SliderFloat("AmbientK", &material.Ka, 0.0f, 1.0f);
+		ImGui::SliderFloat("DiffuseK", &material.Kd, 0.0f, 1.0f);
+		ImGui::SliderFloat("SpecularK", &material.Ks, 0.0f, 1.0f);
+		ImGui::SliderFloat("Shininess", &material.Shininess, 2.0f, 1024.0f);
 	}
 
 	if (ImGui::CollapsingHeader("Post Processing Effects")) {

@@ -22,14 +22,22 @@
 #include <Wang/framebuffer.h>
 #include <ew/procGen.h>
 
-namespace wang {
+struct Material {
+	float Ka = 1.0;
+	float Kd = 0.5;
+	float Ks = 0.5;
+	float Shininess = 128;
+};
 
-	struct Material {
-		float Ka = 1.0;
-		float Kd = 0.5;
-		float Ks = 0.5;
-		float Shininess = 128;
-	} material;
+struct Framebuffer {
+	unsigned int fbo;
+	unsigned int colorBuffer;
+	unsigned int depthBuffer;
+	unsigned int width;
+	unsigned int height;
+};
+
+namespace wang {
 
 	class Scene {
 	public:
@@ -87,6 +95,8 @@ namespace wang {
 		glm::vec3 lightDirection;
 
 		ew::Mesh planeMesh;
+
+		Material material;
 
 	private:
 		//Global state

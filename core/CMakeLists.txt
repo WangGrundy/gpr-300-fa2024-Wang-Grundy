@@ -15,7 +15,7 @@ set(CORE_INC_DIR
  CACHE PATH "CORE INCLUDE SOURCE PATH"
 )
 
-add_library(core STATIC ${CORE_SRC} ${CORE_INC} "Wang/framebuffer.cpp" "Wang/framebuffer.h" "Wang/ShadowMap.h")
+add_library(core STATIC ${CORE_SRC} ${CORE_INC} "../assignments/assignment2/framebuffer.cpp" "../assignments/assignment2/framebuffer.h" "../assignments/assignment2/ShadowMap.h")
 
 find_package(OpenGL REQUIRED)
 

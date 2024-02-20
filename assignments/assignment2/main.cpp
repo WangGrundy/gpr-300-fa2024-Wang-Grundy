@@ -1,4 +1,6 @@
+#include "Scene.h"
 #include "UIClass.h"
+#include "framebuffer.h"
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
 GLFWwindow* initWindow(const char* title, int width, int height);
@@ -12,6 +14,7 @@ float deltaTime;
 
 int main() {
 	wang::Scene scene;
+	Framebuffer frameBufferClass;
 
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -25,7 +28,7 @@ int main() {
 	scene.LoadModelsAndTextures();
 	scene.CameraSetUp();
 
-	scene.newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
+	scene.newFrameBuffer = frameBufferClass.createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 
 	/////////////////////////////////////////////////////////////////////////////////////////////
 	scene.shadowMapFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
