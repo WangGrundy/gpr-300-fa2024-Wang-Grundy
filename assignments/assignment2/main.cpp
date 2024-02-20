@@ -23,7 +23,9 @@ struct Material {
 	float Kd = 0.5;
 	float Ks = 0.5;
 	float Shininess = 128;
-}material;
+};
+
+Material material;
 
 ew::CameraController cameraController;
 ew::Transform monkeyTransform;
@@ -106,7 +108,6 @@ int main() {
 	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowMapFrameBuffer.depthBuffer, 0);
-	
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
