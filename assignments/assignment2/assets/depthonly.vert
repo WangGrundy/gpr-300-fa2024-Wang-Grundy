@@ -1,3 +1,5 @@
+#version 450
+
 layout (location = 0) in vec3 vPos;
 uniform mat4 _ViewProjection;
 uniform mat4 _Model;

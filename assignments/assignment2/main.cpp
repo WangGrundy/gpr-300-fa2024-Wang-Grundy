@@ -84,7 +84,7 @@ int main() {
 
 	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 
-	shadowMapFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
+	//shadowMapFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 
 	//create a shadow map
 	glCreateFramebuffers(1, &shadowMapFrameBuffer.fbo);
@@ -107,7 +107,6 @@ int main() {
 
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadowMapFrameBuffer.depthBuffer, 0);
 	
-
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
 
@@ -126,6 +125,8 @@ int main() {
 
 void RenderInMain() {
 	
+	camera2.position = camera2.target - lightDirection * 5.0f;
+
 	//shadow stuff
 	glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFrameBuffer.fbo);
 	glViewport(0, 0, 2048, 2048);
@@ -136,6 +137,7 @@ void RenderInMain() {
 	depthonlyShader.setVec3("_LightDirection", lightDirection);
 	depthonlyShader.setMat4("_ViewProjection", camera2.projectionMatrix() * camera2.viewMatrix());
 	depthonlyShader.setVec3("vPos", camera2.position);
+	depthonlyShader.setMat4("_Model", monkeyTransform.modelMatrix());
 
 	monkeyModel.draw();
 	
@@ -227,7 +229,7 @@ void UpdateCurrentPostProcessingShader() {
 		grayscaleShader.use();
 	}
 	else {
-		glDisable(GL_FRAMEBUFFER_SRGB);
+		//glDisable(GL_FRAMEBUFFER_SRGB);
 	}
 	if (isColdShaderEnabled) {
 		coldShader.use();
@@ -291,7 +293,6 @@ void drawUI() {
 			litShader.setVec3("_LightDirection", lightDirection);
 		}
 	}
-
 
 	ImGui::End();
 

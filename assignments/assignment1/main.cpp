@@ -123,7 +123,6 @@ void RenderInMain() {
     // Use the current post-processing shader
 	UpdateCurrentPostProcessingShader();
 	
-
     // Bind the color buffer texture
     glBindTextureUnit(0, newFrameBuffer.colorBuffer);
 
