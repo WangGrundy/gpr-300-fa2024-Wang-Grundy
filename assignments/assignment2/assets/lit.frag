@@ -15,7 +15,7 @@ uniform vec3 _AmbientColor = vec3(0.3,0.4,0.46);
 
 in vec4 LightSpacePos;
 uniform sampler2D _ShadowMap; 
-
+uniform float bias;
 
 struct Material{
 	float Ka; //Ambient coefficient (0-1)
@@ -33,17 +33,14 @@ float calcShadow(sampler2D shadowMap, vec4 lightSpacePos){
     //Convert from [-1,1] to [0,1]
     sampleCoord = sampleCoord * 0.5 + 0.5;
 
-	//calcShadow continued…
-	float myDepth = sampleCoord.z; 
+	float myDepth = sampleCoord.z - bias; 
+
 	float shadowMapDepth = texture(shadowMap, sampleCoord.xy).r;
 	//step(a,b) returns 1.0 if a >= b, 0.0 otherwise
 	return step(shadowMapDepth,myDepth);
-	
 }
 
 void main(){
-	
-
 
 	vec3 normalColor = texture(_MainTex_Normal,fs_in.TexCoord).rgb;
 	normalColor = normalize(normalColor * 2.0 - 1.0);   
@@ -68,6 +65,4 @@ void main(){
 	lightColor+=_AmbientColor * _Material.Ka;
 	vec3 objectColor = texture(_MainTex,fs_in.TexCoord).rgb;
 	FragColor = vec4(objectColor * lightColor,1.0);
-
-
 }

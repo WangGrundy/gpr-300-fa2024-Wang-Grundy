@@ -55,6 +55,7 @@ wang::Framebuffer newFrameBuffer;
 GLuint tileTexture;
 
 float gammaVal = 0;
+float bias = 0;
 
 bool isColdShaderEnabled = false, isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
@@ -83,8 +84,6 @@ int main() {
 	CameraSetUp();	
 
 	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
-
-	//shadowMapFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 
 	//create a shadow map
 	glCreateFramebuffers(1, &shadowMapFrameBuffer.fbo);
@@ -147,6 +146,7 @@ void RenderInMain() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glBindTextureUnit(0, tileTexture);
+	glBindTextureUnit(1, shadowMapFrameBuffer.depthBuffer);
 
 	//update litShader when adjusting controls
 	litShader.use();
@@ -157,11 +157,15 @@ void RenderInMain() {
 	litShader.setFloat("_Material.Kd", material.Kd);
 	litShader.setFloat("_Material.Ks", material.Ks);
 	litShader.setFloat("_Material.Shininess", material.Shininess);
+	litShader.setInt("_ShadowMap", 1);
 
+	litShader.setMat4("_LightViewProj", camera2.projectionMatrix() * camera2.viewMatrix());
+	litShader.setFloat("bias", bias);
 	planeMesh.draw();
 
 	//Rotate model around Y axis
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+	monkeyTransform.position = glm::vec3(0.0, 2.0, 0.0);
 
 	//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
 	litShader.setMat4("_Model", monkeyTransform.modelMatrix());
@@ -288,10 +292,11 @@ void drawUI() {
 	if (ImGui::CollapsingHeader("Active Camera")) {
 		//ImGui::Checkbox("Camera 2", &isCamera2);
 
-		if (ImGui::DragFloat3("Direction: ", &lightDirection.x, 0.05, -1, 1)) {
+		if (ImGui::DragFloat3("Direction: ", &lightDirection.x, 0.05, -1, 0)) {
 			lightDirection = glm::normalize(lightDirection);
 			litShader.setVec3("_LightDirection", lightDirection);
 		}
+		ImGui::SliderFloat("Bias", &bias, -0.005, 0.005);
 	}
 
 	ImGui::End();

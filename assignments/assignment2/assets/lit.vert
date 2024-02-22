@@ -10,8 +10,6 @@ uniform mat4 _ViewProjection;
 uniform mat4 _LightViewProj; //view + projection of light source camera
 out vec4 LightSpacePos; //Sent to fragment shader
 
-
-
 out Surface{
 	vec3 WorldPos; //Vertex position in world space
 	vec3 WorldNormal; //Vertex normal in world space
@@ -27,4 +25,5 @@ void main(){
 	gl_Position = _ViewProjection * _Model * vec4(vPos,1.0);
 
 	LightSpacePos = _LightViewProj * _Model * vec4(vPos,1);
+
 }
