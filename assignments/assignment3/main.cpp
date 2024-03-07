@@ -98,9 +98,6 @@ int main() {
 }
 
 void RenderInMain() {
-	
-	//Rotate model around Y axis
-	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 	///Geometry Pass
 	///We must next create a special shader program that will be used to draw surface attributes to all of our textures.
@@ -112,11 +109,15 @@ void RenderInMain() {
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	//Rotate model around Y axis
 	geometryShader.use();
 	geometryShader.setMat4("_Model", glm::mat4(1.0f));
 	geometryShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 	geometryShader.setMat4("_Model", monkeyTransform.modelMatrix());
 	glBindTextureUnit(0, tileTexture);
+	//planeMesh.draw();
+	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
+	planeMesh.draw();
 
 	DrawScene();
 
@@ -161,7 +162,7 @@ void RenderInMain() {
 
     // Draw the quad
     glBindVertexArray(dummyVAO);
-    glDrawArrays(GL_TRIANGLES, 0, 6); // 6 for quad, 3 for triangle
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
 void DrawScene() {
