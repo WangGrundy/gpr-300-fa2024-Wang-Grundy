@@ -12,8 +12,8 @@ out vec4 LightSpacePos; //Sent to fragment shader
 
 out Surface{
 	vec3 WorldPos; //Vertex position in world space
-	vec3 WorldNormal; //Vertex normal in world space
 	vec2 TexCoord;
+	vec3 WorldNormal; //Vertex normal in world space
 }vs_out;
 
 void main(){
