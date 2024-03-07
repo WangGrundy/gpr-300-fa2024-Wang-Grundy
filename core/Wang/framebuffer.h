@@ -23,6 +23,7 @@ namespace wang {
 		unsigned int colorBuffers[3];
 		unsigned int width;
 		unsigned int height;
+		unsigned int depthBuffer;
 	};
 
 	Framebuffer createFramebuffer(unsigned int width, unsigned int height, int colorFormat) {
@@ -90,8 +91,18 @@ namespace wang {
 				GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2
 		};
 		glDrawBuffers(3, drawBuffers);
-		//TODO: Add texture2D depth buffer
+
+		// Add texture2D depth buffer
+		glGenRenderbuffers(1, &gbuffer.depthBuffer);
+		glBindRenderbuffer(GL_RENDERBUFFER, gbuffer.depthBuffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, gbuffer.depthBuffer);
+
 		//TODO: Check for completeness
+		GLenum fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		if (fboStatus != GL_FRAMEBUFFER_COMPLETE) {
+			printf("Framebuffer incomplete: %d", fboStatus);
+		}
 
 		//Clean up global state
 		glBindTexture(GL_TEXTURE_2D, 0);

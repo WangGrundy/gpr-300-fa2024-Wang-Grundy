@@ -27,6 +27,7 @@ struct Material {
 
 ew::CameraController cameraController;
 ew::Transform monkeyTransform;
+ew::Transform planeTransform;
 ew::Camera camera;
 
 void framebufferSizeCallback(GLFWwindow* window, int width, int height);
@@ -115,9 +116,8 @@ void RenderInMain() {
 	geometryShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 	geometryShader.setMat4("_Model", monkeyTransform.modelMatrix());
 	glBindTextureUnit(0, tileTexture);
-	//planeMesh.draw();
-	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 	planeMesh.draw();
+	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 	DrawScene();
 
@@ -183,7 +183,7 @@ void LoadModelsAndTextures() {
 	coldShader = ew::Shader("assets/quad.vert", "assets/cold.frag");
 
 	geometryShader = ew::Shader("assets/geometryPass.vert", "assets/geometryPass.frag");
-	lightingShader = ew::Shader("assets/quad.vert", "assets/defferendLit.frag");
+	lightingShader = ew::Shader("assets/quad.vert", "assets/defferedLit.frag");
 
 	//load model
 	monkeyModel = ew::Model("assets/suzanne.obj");
