@@ -75,6 +75,10 @@ struct PointLight {
 const int MAX_POINT_LIGHTS = 64;
 PointLight pointLights[MAX_POINT_LIGHTS];
 
+//In initialization - create a low res sphere mesh
+// doesn't work for some reason... missing library??
+//ew::Mesh sphereMesh = ew::Mesh(ew::createSphere(1.0f, 8));
+
 int main() {
 	srand((unsigned)time(NULL));
 
@@ -160,12 +164,21 @@ void RenderInMain() {
 	glViewport(0, 0, newFrameBuffer.width, newFrameBuffer.height);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	lightingShader.use();
-	//TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
+	////TODO: Set the rest of your lighting uniforms for deferredShader. (same way we did this for lit.frag)
 	lightingShader.setVec3("_EyePos", camera.position);
 	lightingShader.setFloat("_Material.Ka", material.Ka);
 	lightingShader.setFloat("_Material.Kd", material.Kd);
 	lightingShader.setFloat("_Material.Ks", material.Ks);
 	lightingShader.setFloat("_Material.Shininess", material.Shininess);
+
+	//for (int i = 0; i < MAX_POINT_LIGHTS; i++) {
+	//	//Creates prefix "_PointLights[0]." etc
+	//	std::string prefix = "_PointLights[" + std::to_string(i) + "].";
+	//	lightingShader.setVec3(prefix + "position", pointLights[i].position);
+	//	lightingShader.setFloat(prefix + "radius", pointLights[i].radius);
+	//	lightingShader.setVec4(prefix + "color", pointLights[i].color);
+	//}
+
 
 	//Bind g-buffer textures
 	glBindTextureUnit(0, gBuffer.colorBuffers[0]);
