@@ -39,6 +39,7 @@ void CameraSetUp();
 void LoadModelsAndTextures();
 void UpdateCurrentPostProcessingShader();
 void DrawScene();
+void InitLightSources();
 
 //Global state
 int screenWidth = 1080;
@@ -64,11 +65,26 @@ bool postProcessShaderChanged = false;
 ew::Mesh planeMesh;
 wang::GBuffer gBuffer;
 
+//main.cpp
+struct PointLight {
+	glm::vec3 position;
+	float radius;
+	glm::vec4 color;
+};
+
+const int MAX_POINT_LIGHTS = 64;
+PointLight pointLights[MAX_POINT_LIGHTS];
+
 int main() {
+	srand((unsigned)time(NULL));
+
+	//TODO: Initialize a bunch of lights with different positions and colors
+	InitLightSources();
+
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
 
-	planeMesh = ew::Mesh(ew::createPlane(10, 10, 10));
+	planeMesh = ew::Mesh(ew::createPlane(100, 100, 10));
 
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK); //Back face culling
@@ -98,6 +114,21 @@ int main() {
 	printf("Shutting down...");
 }
 
+void InitLightSources() {
+	float z = 0;
+	float x = 0;
+
+	for (PointLight light : pointLights) {
+		if (x == 6) {
+			z += 2;
+			x = 0;
+		}
+		light.position = glm::vec3(x, 5, z);
+		light.color = glm::vec4(rand(), rand(), rand(), 1);
+		light.radius = 10.0f;
+	}
+}
+
 void RenderInMain() {
 
 	///Geometry Pass
@@ -116,10 +147,12 @@ void RenderInMain() {
 	geometryShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
 	geometryShader.setMat4("_Model", monkeyTransform.modelMatrix());
 	glBindTextureUnit(0, tileTexture);
-	planeMesh.draw();
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
-
+	monkeyTransform.position = glm::vec3(0, 2, 0);
 	DrawScene();
+
+	geometryShader.setMat4("_Model", planeTransform.modelMatrix());
+	planeMesh.draw();
 
 	//LIGHTING PASS
 	//if using post processing, we draw to our offscreen framebuffer

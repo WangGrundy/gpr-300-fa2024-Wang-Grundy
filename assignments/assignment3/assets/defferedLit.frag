@@ -33,6 +33,29 @@ uniform layout(binding = 0) sampler2D _gPositions;
 uniform layout(binding = 1) sampler2D _gNormals;
 uniform layout(binding = 2) sampler2D _gAlbedo;
 
+struct PointLight{
+	vec3 position;
+float radius;
+	vec4 color;
+};
+
+#define MAX_POINT_LIGHTS 64
+uniform PointLight _PointLights[MAX_POINT_LIGHTS];
+
+//vec3 calcPointLight(PointLight light, vec3 normal,vec3 pos){
+//	vec3 diff = light.position - pos;
+//	//Direction toward light position
+//	vec3 toLight = normalize(diff);
+//	//TODO: Usual blinn-phong calculations for diffuse + specular
+//	vec3 lightColor = (_Material.kd + _Material.Ks) * _LightColor;
+//
+//	//Attenuation
+//	float d = length(diff); //Distance to light
+//	lightColor*=attenuate(d,light.radius); //See below for attenuation options
+//	return lightColor;
+//}
+
+
 vec3 calculateLighting(vec3 normal, vec3 worldPos, vec3 albedo)
 {
 	//Light pointing straight do
