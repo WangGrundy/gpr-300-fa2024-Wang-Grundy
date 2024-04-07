@@ -15,7 +15,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/assets/
 ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets/)
 
 install(FILES ${ASSIGNMENT4_INC} DESTINATION include/Assignment4)
-add_executable(Assignment4 ${ASSIGNMENT4_SRC} ${ASSIGNMENT4_INC})
+add_executable(Assignment4 ${ASSIGNMENT4_SRC} ${ASSIGNMENT4_INC} )
 target_link_libraries(Assignment4 PUBLIC core IMGUI assimp)
 target_include_directories(Assignment4 PUBLIC ${CORE_INC_DIR} ${stb_INCLUDE_DIR})
 

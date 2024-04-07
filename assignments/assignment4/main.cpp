@@ -16,6 +16,9 @@
 #include <ew/cameraController.h>
 #include <ew/texture.h>
 #include <Wang/framebuffer.h>
+#include <Wang/Node.h>
+#include <vector>
+#include <map>
 
 struct Material {
 	float Ka = 1.0;
@@ -37,6 +40,10 @@ void CameraSetUp();
 void LoadModelsAndTextures();
 void UpdateCurrentPostProcessingShader();
 
+void CreateNodes();
+void CreateAnimationModels();
+void DrawAllInTree(Node* parent);
+
 //Global state
 int screenWidth = 1080;
 int screenHeight = 720;
@@ -49,6 +56,8 @@ ew::Shader litShader, invertShader, blurShader, noShader, gammaShader, grayscale
 bool shaderChanged = false;
 ew::Model monkeyModel;
 
+std::vector<ew::Model> animationModels;
+
 unsigned int dummyVAO;
 
 wang::Framebuffer newFrameBuffer;
@@ -58,6 +67,39 @@ float gammaVal = 0;
 
 bool isColdShaderEnabled = false, isGrayscaleShaderEnabled = false, noPostProcessShader = false, isInvertShaderEnabled = false, isBlurShaderEnabled = false, isGammaShaderEnabled = false;
 bool postProcessShaderChanged = false;
+
+Node* rootOfAnimation = nullptr;
+
+ew::Model* headModel;
+ew::Model* bodyModel;
+ew::Model* waistModel;
+
+ew::Model* leftKneeModel;
+ew::Model* leftFootModel;
+
+ew::Model* rightKneeModel;
+ew::Model* rightFootModel;
+
+ew::Model* leftElbowModel;
+ew::Model* leftHandModel;
+ew::Model* rightElbowModel;
+ew::Model* rightHandModel;
+
+/////
+
+Node* head;
+Node* body;
+Node* waist;
+
+Node* leftKnee;
+Node* leftFoot;
+Node* rightKnee;
+Node* rightFoot;
+
+Node* leftElbow;
+Node* leftHand;
+Node* rightElbow;
+Node* rightHand;
 
 int main() {
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
@@ -72,6 +114,9 @@ int main() {
 
 	newFrameBuffer = wang::createFramebuffer(screenWidth, screenHeight, GL_RGB32F);
 	glCreateVertexArrays(1, &dummyVAO);
+
+	CreateAnimationModels();
+	CreateNodes();
 
 	while (!glfwWindowShouldClose(window)) {
 		glfwPollEvents();
@@ -89,6 +134,105 @@ int main() {
 	printf("Shutting down...");
 }
 
+void CreateNodes() {
+	head = new Node(headModel);
+	body = new Node(bodyModel);
+	waist = new Node(waistModel);
+
+	leftKnee = new Node(leftKneeModel);
+	leftFoot = new Node(leftFootModel);
+	rightKnee = new Node(rightKneeModel);
+	rightFoot = new Node(rightFootModel);
+
+	leftElbow = new Node(leftElbowModel);
+	leftHand = new Node(leftHandModel);
+	rightElbow = new Node(rightElbowModel);
+	rightHand = new Node(rightHandModel);
+
+	rootOfAnimation = head;
+
+	//upper
+	head->AddChild(body);
+
+	body->AddParent(head);
+	body->AddChild(waist);
+	body->AddChild(leftElbow);
+	body->AddChild(rightElbow);
+
+	waist->AddParent(body);
+	waist->AddChild(leftKnee);
+	waist->AddChild(rightKnee);
+
+	//arms and hands
+	leftElbow->AddParent(body);
+	leftElbow->AddChild(leftHand);
+	
+	leftHand->AddParent(leftElbow);
+
+	rightElbow->AddParent(body);
+	rightElbow->AddChild(rightHand);
+	
+	rightHand->AddParent(rightElbow);
+
+	//legs and knees
+	leftKnee->AddParent(waist);
+	leftKnee->AddChild(leftFoot);
+	
+	leftFoot->AddParent(leftKnee);
+
+	rightKnee->AddParent(waist);
+	rightKnee->AddChild(rightFoot);
+
+	rightFoot->AddParent(rightKnee);
+
+	////////////////////////////////////////////////////////
+
+	glm::vec3 pos = glm::vec3(0, 0, 0);
+	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+	glm::vec3 scale = glm::vec3(2.0f, 2.0f, 2.0f);
+
+	ew::Transform transform;
+	transform.position = pos;
+	transform.rotation = rotation;
+	transform.scale = scale;
+
+	head->SetGlobalTransform(transform);
+
+	//
+	transform.position = head->globalTransform.position;
+	transform.position.y = transform.position.y - 8.0f;
+	transform.rotation = rotation;
+	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
+
+	body->SetGlobalTransform(transform);
+
+	//
+	transform.position = pos;
+	transform.position.y = transform.position.y - 5.0f;
+	transform.rotation = rotation;
+	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);;
+
+
+	waist->SetGlobalTransform(transform);
+}
+
+void CreateAnimationModels() {
+	headModel = new ew::Model("assets/suzanne.obj");
+	bodyModel = new ew::Model("assets/suzanne.obj");
+	waistModel = new ew::Model("assets/suzanne.obj");
+
+	leftKneeModel = new ew::Model("assets/suzanne.obj");
+	leftFootModel = new ew::Model("assets/suzanne.obj");
+
+	rightKneeModel = new ew::Model("assets/suzanne.obj");
+	rightFootModel = new ew::Model("assets/suzanne.obj");
+
+	leftElbowModel = new ew::Model("assets/suzanne.obj");
+	leftHandModel = new ew::Model("assets/suzanne.obj");
+	rightElbowModel = new ew::Model("assets/suzanne.obj");
+	rightHandModel = new ew::Model("assets/suzanne.obj");
+}
+
 void RenderInMain() {
 	
 	//Draw to off-screen framebuffer instead of screen
@@ -98,7 +242,7 @@ void RenderInMain() {
 
 	glBindTextureUnit(0, tileTexture);
 
-	//update litShader when adjusting controls
+	//update litShader when adjusting controls 
 	litShader.use();
 	litShader.setMat4("_Model", glm::mat4(1.0f));
 	litShader.setMat4("_ViewProjection", camera.projectionMatrix() * camera.viewMatrix());
@@ -112,11 +256,11 @@ void RenderInMain() {
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
 	//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
-	litShader.setMat4("_Model", monkeyTransform.modelMatrix());
+	//litShader.setMat4("_Model", monkeyTransform.modelMatrix());
 
-	monkeyModel.draw(); //Draws monkey model using current shader
+	DrawAllInTree(rootOfAnimation);
 
-	 // Draw to the default framebuffer
+	// Draw to the default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -129,6 +273,25 @@ void RenderInMain() {
     // Draw the quad
     glBindVertexArray(dummyVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6); // 6 for quad, 3 for triangle
+}
+
+void DrawAllInTree(Node* current) {
+	if (current->children.empty())
+	{
+		litShader.setMat4("_Model", current->globalTransform.modelMatrix());
+		current->model.draw();
+		return;
+	}
+
+	//keep exploring until no children
+	for (Node* node : current->children) 
+	{
+		DrawAllInTree(node);
+	}
+
+	//draw this
+	litShader.setMat4("_Model", current->globalTransform.modelMatrix());
+	current->model.draw();
 }
 
 void LoadModelsAndTextures() {
