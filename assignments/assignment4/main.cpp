@@ -43,6 +43,8 @@ void UpdateCurrentPostProcessingShader();
 void CreateNodes();
 void CreateAnimationModels();
 void DrawAllInTree(Node* parent);
+void AnimationMovement();
+float BounceUntil(bool& isIncreasing, float& current, float min, float max, float amount);
 
 //Global state
 int screenWidth = 1080;
@@ -101,6 +103,25 @@ Node* leftHand;
 Node* rightElbow;
 Node* rightHand;
 
+//
+
+glm::quat rightElbowRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+float rightElbowRotationAmount = 0;
+
+bool rightElbowPosYIncreasing = false;
+float rightElbowPosYChange = 0.f;
+glm::vec3 rightElbowOriginalPos;
+
+bool rightElbowPosZIncreasing = false;
+float rightElbowPosZChange = 0.f;
+
+bool leftElbowPosDecreasing = false;
+
+float headScale = 2;
+bool isHeadDecreasing = false;
+
+
+
 int main() {
 	GLFWwindow* window = initWindow("Assignment 1", screenWidth, screenHeight);
 	glfwSetFramebufferSizeCallback(window, framebufferSizeCallback);
@@ -135,19 +156,19 @@ int main() {
 }
 
 void CreateNodes() {
-	head = new Node(headModel);
-	body = new Node(bodyModel);
-	waist = new Node(waistModel);
+	head = new Node(headModel); head->name = "head";
+	body = new Node(bodyModel); body->name = "body";
+	waist = new Node(waistModel); waist->name = "waist";
 
-	leftKnee = new Node(leftKneeModel);
-	leftFoot = new Node(leftFootModel);
-	rightKnee = new Node(rightKneeModel);
-	rightFoot = new Node(rightFootModel);
+	leftKnee = new Node(leftKneeModel); leftKnee->name = "leftKnee";
+	leftFoot = new Node(leftFootModel); leftFoot->name = "leftFoot";
+	rightKnee = new Node(rightKneeModel); rightKnee->name = "rightKnee";
+	rightFoot = new Node(rightFootModel); rightFoot->name = "rightFoot";
 
-	leftElbow = new Node(leftElbowModel);
-	leftHand = new Node(leftHandModel);
-	rightElbow = new Node(rightElbowModel);
-	rightHand = new Node(rightHandModel);
+	leftElbow = new Node(leftElbowModel); leftElbow->name = "leftElbow";
+	leftHand = new Node(leftHandModel); leftHand->name = "leftHand";
+	rightElbow = new Node(rightElbowModel); rightElbow->name = "rightElbow";
+	rightHand = new Node(rightHandModel); rightHand->name = "rightHand";
 
 	rootOfAnimation = head;
 
@@ -189,31 +210,100 @@ void CreateNodes() {
 
 	glm::vec3 pos = glm::vec3(0, 0, 0);
 	glm::quat rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-	glm::vec3 scale = glm::vec3(2.0f, 2.0f, 2.0f);
-
+	glm::vec3 scale = glm::vec3(1.0f, 1.0f, 1.0f);
 	ew::Transform transform;
-	transform.position = pos;
-	transform.rotation = rotation;
-	transform.scale = scale;
 
-	head->SetGlobalTransform(transform);
+	//main 3
+	{
+		transform.position = pos;
+		transform.rotation = rotation;
+		transform.scale = glm::vec3(2.0f, 2.0f, 2.0f);;
 
-	//
-	transform.position = head->globalTransform.position;
-	transform.position.y = transform.position.y - 8.0f;
-	transform.rotation = rotation;
-	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);
+		head->SetGlobalTransform(transform);
 
-	body->SetGlobalTransform(transform);
+		//
+		glm::vec3 headPos = head->globalTransform.position;
+		transform.position = glm::vec3(headPos.x, headPos.y - 5, headPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
 
-	//
-	transform.position = pos;
-	transform.position.y = transform.position.y - 5.0f;
-	transform.rotation = rotation;
-	transform.scale = glm::vec3(1.0f, 1.0f, 1.0f);;
+		body->SetGlobalTransform(transform);
 
+		//
+		glm::vec3 bodyPos = body->globalTransform.position;
+		transform.position = glm::vec3(bodyPos.x, bodyPos.y - 5, bodyPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
 
-	waist->SetGlobalTransform(transform);
+		waist->SetGlobalTransform(transform);
+	}
+	
+	//legs
+	{
+		glm::vec3 waistPos = waist->globalTransform.position;
+		transform.position = glm::vec3(waistPos.x - 3, waistPos.y - 6, waistPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		leftKnee->SetGlobalTransform(transform);
+
+		//
+		glm::vec3 leftKneePos = leftKnee->globalTransform.position;
+		transform.position = glm::vec3(leftKneePos.x, leftKneePos.y - 5, leftKneePos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+		
+		leftFoot->SetGlobalTransform(transform);
+
+		//
+		transform.position = glm::vec3(waistPos.x + 3, waistPos.y - 6, waistPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		rightKnee->SetGlobalTransform(transform);
+
+		//
+		glm::vec3 rightKneePos = rightKnee->globalTransform.position;
+		transform.position = glm::vec3(rightKneePos.x, rightKneePos.y - 5, rightKneePos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		rightFoot->SetGlobalTransform(transform);
+	}
+
+	//arms
+	{
+		glm::vec3 bodyPos = body->globalTransform.position;
+		transform.position = glm::vec3(bodyPos.x - 4, bodyPos.y, bodyPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		leftElbow->SetGlobalTransform(transform);
+
+		glm::vec3 leftElbowPos = leftElbow->globalTransform.position;
+		transform.position = glm::vec3(leftElbowPos.x - 2, leftElbowPos.y - 3, leftElbowPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		leftHand->SetGlobalTransform(transform);
+		//
+
+		transform.position = glm::vec3(bodyPos.x + 4, bodyPos.y, bodyPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		rightElbow->SetGlobalTransform(transform);
+
+		glm::vec3 rightElbowPos = rightElbow->globalTransform.position;
+		transform.position = glm::vec3(rightElbowPos.x + 2, rightElbowPos.y - 3, rightElbowPos.z);
+		transform.rotation = rotation;
+		transform.scale = scale;
+
+		rightHand->SetGlobalTransform(transform);
+	}
+
+	///////////////////////
+	rightElbowOriginalPos = rightElbow->globalTransform.position;
 }
 
 void CreateAnimationModels() {
@@ -255,11 +345,9 @@ void RenderInMain() {
 	//Rotate model around Y axis
 	monkeyTransform.rotation = glm::rotate(monkeyTransform.rotation, deltaTime, glm::vec3(0.0, 1.0, 0.0));
 
-	//transform.modelMatrix() combines translation, rotation, and scale into a 4x4 model matrix
-	//litShader.setMat4("_Model", monkeyTransform.modelMatrix());
-
 	DrawAllInTree(rootOfAnimation);
-
+	AnimationMovement();
+	
 	// Draw to the default framebuffer
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -273,6 +361,95 @@ void RenderInMain() {
     // Draw the quad
     glBindVertexArray(dummyVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6); // 6 for quad, 3 for triangle
+}
+
+void AnimationMovement() {
+
+	glm::vec3 moveEveryFrame(0.001, 0, 0);
+	head->UpdatePosition(moveEveryFrame);
+
+	//arms and elbows
+	{
+		rightElbowRotationAmount += 0.2 * deltaTime;
+
+		rightElbowRotation = glm::angleAxis(glm::degrees(rightElbowRotationAmount), glm::vec3(1.0f, 1.0f, 0.0f));
+		rightElbow->UpdateRotation(rightElbowRotation);
+
+		rightElbowRotation = glm::angleAxis(glm::degrees(rightElbowRotationAmount), glm::vec3(-1.0f, -1.0f, 0.0f));
+		leftElbow->UpdateRotation(rightElbowRotation);
+
+		////increase and decrease arm z and y pos (max = 2)s
+		//float changeY = BounceUntil(rightElbowPosYIncreasing, rightElbowPosYChange, -2.f, 2.f, 0.002f);
+		//std::cout << changeY << std::endl;
+
+		{
+			//right elbow increase/decrease
+			if (rightElbowPosYIncreasing) {
+
+				rightElbowPosYChange += 4 * deltaTime;
+				glm::vec3 newPosY(0, 4 * deltaTime, 0);
+				rightElbow->UpdatePosition(newPosY);
+
+				//if it reaches desired max, go the other way
+				if (rightElbowPosYChange >= 1) {
+					rightElbowPosYIncreasing = false;
+				}
+			}
+			else {
+				rightElbowPosYChange -= 4 * deltaTime;
+				glm::vec3 newPosY(0, -4 * deltaTime, 0);
+				rightElbow->UpdatePosition(newPosY);
+
+				//if it reaches desired max, go the other way
+				if (rightElbowPosYChange <= -1) {
+					rightElbowPosYIncreasing = true;
+				}
+			}
+		}
+		
+		{
+			if (rightElbowPosZIncreasing) {
+
+				rightElbowPosZChange += 4 * deltaTime;
+				glm::vec3 newPosY(0, 0, 4 * deltaTime);
+				rightElbow->UpdatePosition(newPosY);
+
+				//if it reaches desired max, go the other way
+				if (rightElbowPosZChange >= 1) {
+					rightElbowPosZIncreasing = false;
+				}
+			}
+			else {
+				rightElbowPosZChange -= 4 * deltaTime;
+				glm::vec3 newPosY(0, 0, -4 * deltaTime);
+				rightElbow->UpdatePosition(newPosY);
+
+				//if it reaches desired max, go the other way
+				if (rightElbowPosZChange <= -1) {
+					rightElbowPosZIncreasing = true;
+				}
+			}
+		}
+	}
+
+	//big 3
+	{
+		if (isHeadDecreasing) {
+			headScale -= 0.01;
+			if (headScale <= 2) {
+				isHeadDecreasing = false;
+			}
+		}
+		else {
+			headScale += 0.01;
+			if (headScale >= 5) {
+				isHeadDecreasing = true;
+			}
+		}
+
+		head->globalTransform.scale = glm::vec3(headScale, headScale, headScale);
+	}
+
 }
 
 void DrawAllInTree(Node* current) {
@@ -449,4 +626,24 @@ GLFWwindow* initWindow(const char* title, int width, int height) {
 	ImGui_ImplOpenGL3_Init();
 
 	return window;
+}
+
+float BounceUntil(bool& isIncreasing, float& current, float min, float max, float amount) {
+	
+	if (isIncreasing) {
+		current += amount;
+
+		if (current >= max) {
+			isIncreasing = false;
+		}
+	}
+	else {
+		current -= amount;
+
+		if (current <= min) {
+			isIncreasing = true;
+		}
+	}
+
+	return current;
 }
